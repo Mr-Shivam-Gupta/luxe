@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&family=Jost:wght@300;400;500;600&display=swap');
 
 *, *::before, *::after {
   box-sizing: border-box;
@@ -32,9 +31,22 @@ html, body {
   font-family: var(--font-body);
 }
 
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.global-header {
+  flex-shrink: 0;
+  z-index: 1000;
+  position: relative;
+  background: var(--cream);
+}
+
 /* Scroll snap container */
 .snap-container {
-  height: 100vh;
+  flex: 1;
   overflow-y: scroll;
   /* scroll-snap-type: y mandatory; */
   /* scroll-behavior: smooth; */
@@ -49,7 +61,7 @@ html, body {
 
 /* Each section - Pinned with overscroll panel effect */
 .snap-section {
-  height: 100vh;
+  height: 100%;
   width: 100%;
   position: sticky;
   top: 0;
@@ -323,7 +335,7 @@ html, body {
   padding: 48px;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
 }
 
 .collection-inner {
@@ -547,7 +559,7 @@ html, body {
   padding: 48px;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
 }
 
 .signature-header {
@@ -653,7 +665,7 @@ html, body {
   padding: 48px;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
 }
 
@@ -756,7 +768,7 @@ html, body {
   padding: 48px;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
 }
 
 .craft-header {
@@ -799,7 +811,7 @@ html, body {
   padding: 48px;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
 }
 
 .footer-top {

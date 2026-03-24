@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Head from 'next/head';
 import Lenis from 'lenis';
-
+import { motion, useScroll, useTransform } from 'framer-motion';
 // Watch images from Unsplash (free, no auth needed)
 const WATCHES = {
   heroVideo: '/assets/Rolex_Submariner_2022_Black_Blender_3d_Product_Animation_1080p.mp4',
@@ -34,8 +34,23 @@ const products = [
 export default function Home() {
   const containerRef = useRef(null);
   const lenisRef = useRef(null);
+  const collectionRef = useRef(null);
   const [visibleSections, setVisibleSections] = useState(new Set([0]));
   const [collectionSlide, setCollectionSlide] = useState(0);
+
+  const { scrollYProgress: collProgress } = useScroll({
+    target: collectionRef,
+    container: containerRef,
+    offset: ["start start", "end end"]
+  });
+
+  const imgWidth = useTransform(collProgress, [0, 0.5, 1], ["100%", "48%", "48%"]);
+  const imgHeight = useTransform(collProgress, [0, 0.5, 1], ["100%", "48%", "88%"]);
+  const imgTop = useTransform(collProgress, [0, 0.5, 1], ["0%", "0%", "12%"]);
+  const imgLeft = useTransform(collProgress, [0, 0.5, 1], ["0%", "52%", "0%"]);
+  const textOpacity = useTransform(collProgress, [0.6, 0.9], [0, 1]);
+  const rightOpacity = useTransform(collProgress, [0.6, 0.9], [0, 1]);
+  const rightX = useTransform(collProgress, [0.6, 0.9], [40, 0]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -133,11 +148,9 @@ export default function Home() {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* Scroll snap container */}
-      <div className="snap-container" ref={containerRef}>
-
-        {/* ===== SECTION 0: HERO (watch close-up with "Crafted for Time") ===== */}
-        <section className="snap-section hero-section" data-index="0">
+      {/* Standard Layout with Fixed Header Space */}
+      <div className="app-layout">
+        <header className="global-header">
           {/* Announcement bar */}
           <div className="announcement-bar">
             <div className="announcement-bar-track" aria-label="Promotional offer marquee">
@@ -163,7 +176,14 @@ export default function Home() {
               <a onClick={() => scrollToSection(8)}>Contact</a>
             </div>
           </nav>
-          {/* Hero image */}
+        </header>
+
+        {/* Scroll snap container */}
+        <div className="snap-container" ref={containerRef}>
+
+          {/* ===== SECTION 0: HERO (watch close-up with "Crafted for Time") ===== */}
+          <section className="snap-section hero-section" data-index="0">
+            {/* Hero image */}
           <div className="hero-image-container">
             <video
               className="hero-video"
@@ -214,38 +234,68 @@ export default function Home() {
         </section>
 
         {/* ===== SECTION 3: NEW COLLECTION ===== */}
-        <section className="snap-section collection-section" data-index="3">
-          <div className="collection-inner">
-            <div className={`collection-left ${isVisible(3) ? 'animate-in animate-in-delay-1' : ''}`}>
-              <h2 className="section-label">New collection</h2>
-              <img src={WATCHES.collection} alt="Man wearing luxury watch" />
-            </div>
-            <div className={`collection-right ${isVisible(3) ? 'animate-in animate-in-delay-2' : ''}`}>
-              <div className="top-picks-header">
-                <h3 className="top-picks-title">Top Picks</h3>
-                <div className="arrow-btns">
-                  <button className="arrow-btn" onClick={() => setCollectionSlide(s => Math.max(0, s - 1))}>→</button>
-                  <button className="arrow-btn" onClick={() => setCollectionSlide(s => Math.min(products.length - 2, s + 1))}>←</button>
-                </div>
+        <section 
+          className="snap-section collection-section" 
+          data-index="3" 
+          ref={collectionRef}
+          style={{ height: '300%', position: 'relative', overflow: 'visible' }}
+        >
+          {/* Inner sticky wrapper */}
+          <div style={{ position: 'sticky', top: 0, height: '33.3333%', display: 'flex', flexDirection: 'column' }}>
+            <div className="collection-inner" style={{ position: 'relative' }}>
+              {/* The animating image */}
+              <motion.img 
+                src={WATCHES.collection} 
+                alt="Man wearing luxury watch"
+                style={{ 
+                  position: 'absolute',
+                  top: imgTop,
+                  left: imgLeft,
+                  width: imgWidth,
+                  height: imgHeight,
+                  objectFit: 'cover', 
+                  borderRadius: '12px',
+                  zIndex: 5
+                }}
+              />
+              <div className="collection-left" style={{ position: 'relative', minHeight: 0, zIndex: 10 }}>
+                <motion.h2 className="section-label" style={{ opacity: textOpacity }}>New collection</motion.h2>
               </div>
-              <div className="products-grid">
-                {products.slice(collectionSlide, collectionSlide + 2).map((p, i) => (
-                  <div className="product-card" key={i}>
-                    <div className="product-card-img">
-                      <img src={p.img} alt={p.name} />
-                    </div>
-                    <div className="product-card-info">
-                      <div className="product-name-row">
-                        <span className="product-name">{p.name}</span>
-                        <span className="heart-icon">♡</span>
-                      </div>
-                      <div className="product-meta">{p.size} | {p.colors}</div>
-                      <div className="product-price">{p.price}</div>
-                    </div>
-                    <button className="btn-buy">BUY NOW</button>
+              <motion.div 
+                className="collection-right"
+                style={{
+                  opacity: rightOpacity,
+                  x: rightX,
+                  minHeight: 0,
+                  zIndex: 10
+                }}
+              >
+                <div className="top-picks-header">
+                  <h3 className="top-picks-title">Top Picks</h3>
+                  <div className="arrow-btns">
+                    <button className="arrow-btn" onClick={() => setCollectionSlide(s => Math.max(0, s - 1))}>→</button>
+                    <button className="arrow-btn" onClick={() => setCollectionSlide(s => Math.min(products.length - 2, s + 1))}>←</button>
                   </div>
-                ))}
-              </div>
+                </div>
+                <div className="products-grid">
+                  {products.slice(collectionSlide, collectionSlide + 2).map((p, i) => (
+                    <div className="product-card" key={i}>
+                      <div className="product-card-img">
+                        <img src={p.img} alt={p.name} />
+                      </div>
+                      <div className="product-card-info">
+                        <div className="product-name-row">
+                          <span className="product-name">{p.name}</span>
+                          <span className="heart-icon">♡</span>
+                        </div>
+                        <div className="product-meta">{p.size} | {p.colors}</div>
+                        <div className="product-price">{p.price}</div>
+                      </div>
+                      <button className="btn-buy">BUY NOW</button>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
             </div>
           </div>
         </section>
@@ -427,6 +477,7 @@ export default function Home() {
           </div>
         </section>
 
+        </div>
       </div>
     </>
   );
