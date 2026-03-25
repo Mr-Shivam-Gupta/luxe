@@ -43,13 +43,17 @@ export default function Home() {
 
   const collProgress = useMotionValue(0);
 
-  const imgWidth = useTransform(collProgress, [0, 0.5, 1], ["100%", "48%", "48%"]);
-  const imgHeight = useTransform(collProgress, [0, 0.5, 1], ["100%", "48%", "88%"]);
-  const imgTop = useTransform(collProgress, [0, 0.5, 1], ["0%", "0%", "12%"]);
-  const imgLeft = useTransform(collProgress, [0, 0.5, 1], ["0%", "52%", "0%"]);
-  const textOpacity = useTransform(collProgress, [0.6, 0.9], [0, 1]);
-  const rightOpacity = useTransform(collProgress, [0.6, 0.9], [0, 1]);
-  const rightX = useTransform(collProgress, [0.6, 0.9], [40, 0]);
+  // Phase 1 (0 → 0.45): image is FULL PAGE — fades in + zooms in from scale 1.12 → 1
+  // Phase 2 (0.45 → 1): image shrinks and settles into the left column
+  const imgOpacity = useTransform(collProgress, [0, 0.3],          [0, 1]);
+  const imgScale   = useTransform(collProgress, [0, 0.45],         [1.12, 1]);
+  const imgWidth   = useTransform(collProgress, [0.45, 1],         ["100%", "48%"]);
+  const imgHeight  = useTransform(collProgress, [0.45, 1],         ["100%", "88%"]);
+  const imgTop     = useTransform(collProgress, [0.45, 1],         ["0%",   "6%"]);
+  const imgRadius  = useTransform(collProgress, [0.45, 1],         ["0px",  "12px"]);
+  const textOpacity  = useTransform(collProgress, [0.75, 1], [0, 1]);
+  const rightOpacity = useTransform(collProgress, [0.75, 1], [0, 1]);
+  const rightX       = useTransform(collProgress, [0.75, 1], [40, 0]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -270,21 +274,32 @@ export default function Home() {
             data-index="3"
           >
             <div className="collection-inner" style={{ position: 'relative' }}>
-              {/* The animating image */}
-              <motion.img
-                src={WATCHES.collection}
-                alt="Man wearing luxury watch"
+              {/* Phase 1: full-page cinematic reveal. Phase 2: settles to left column */}
+              <motion.div
                 style={{
                   position: 'absolute',
                   top: imgTop,
-                  left: imgLeft,
+                  left: 0,
                   width: imgWidth,
                   height: imgHeight,
-                  objectFit: 'cover',
-                  borderRadius: '12px',
-                  zIndex: 5
+                  borderRadius: imgRadius,
+                  overflow: 'hidden',
+                  opacity: imgOpacity,
+                  zIndex: 5,
                 }}
-              />
+              >
+                <motion.img
+                  src={WATCHES.collection}
+                  alt="Man wearing luxury watch"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    scale: imgScale,
+                    transformOrigin: 'center center',
+                  }}
+                />
+              </motion.div>
               <div className="collection-left" style={{ position: 'relative', minHeight: 0, zIndex: 10 }}>
                 <motion.h2 className="section-label" style={{ opacity: textOpacity }}>New collection</motion.h2>
               </div>
