@@ -446,7 +446,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
 }
 
 .top-picks-title {
@@ -870,6 +871,81 @@ body {
 }
 
 /* ===========================
+   SHARED: DRAG CAROUSEL
+   =========================== */
+
+.craft-page {
+  flex-shrink: 0;
+  width: 100%;          /* each page = exactly the viewport width */
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.carousel-viewport {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+}
+
+.carousel-viewport:active {
+  cursor: grabbing;
+}
+
+.carousel-track {
+  display: flex;
+  gap: 16px;
+  height: 100%;
+  will-change: transform;
+  user-select: none;
+}
+
+.carousel-card {
+  flex-shrink: 0;
+  height: 100%;
+}
+
+.carousel-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding-top: 12px;
+  flex-shrink: 0;
+}
+
+.carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.3s, transform 0.3s;
+}
+
+.carousel-dot.active {
+  background: var(--gold);
+  transform: scale(1.4);
+}
+
+/* Craft carousel overrides */
+.craft-carousel-viewport {
+  flex: 1;
+  min-height: 0;
+}
+
+.craft-carousel-track {
+  gap: 8px;
+}
+
+.craft-dots {
+  padding-top: 16px;
+}
+
+/* ===========================
    SECTION 7: CRAFTSMANSHIP
    =========================== */
 .craft-section {
@@ -878,13 +954,15 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
+  overflow: hidden;
 }
 
 .craft-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
+  flex-shrink: 0;
 }
 
 .craft-title {
@@ -901,17 +979,9 @@ body {
 .craft-desc {
   max-width: 420px;
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.6;
   color: var(--text-muted);
   font-weight: 300;
-}
-
-.craft-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  flex: 1;
-  min-height: 0;
 }
 
 /* ===========================

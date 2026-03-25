@@ -39,7 +39,48 @@ export default function Home() {
   const collectionRef = useRef(null);
   const [visibleSections, setVisibleSections] = useState(new Set([0]));
   const [collectionSlide, setCollectionSlide] = useState(0);
+  const [craftSlide, setCraftSlide] = useState(0);
   const [isHero, setIsHero] = useState(true);
+  const topPicksTrackRef = useRef(null);
+  const craftTrackRef = useRef(null);
+  const topPicksTimerRef = useRef(null);
+  const craftTimerRef = useRef(null);
+  const topPicksRestartRef = useRef(null);
+  const craftRestartRef = useRef(null);
+
+  const TP_COUNT = products.length - 1; // 3 stops (shows 2 cards at a time)
+  const CR_COUNT = products.length;     // 4 stops
+
+  // Start / restart Top Picks auto-loop
+  const startTopPicks = () => {
+    clearInterval(topPicksTimerRef.current);
+    topPicksTimerRef.current = setInterval(() => {
+      setCollectionSlide(s => (s + 1) % TP_COUNT);
+    }, 3000);
+  };
+
+  // Start / restart Craft auto-loop
+  const startCraft = () => {
+    clearInterval(craftTimerRef.current);
+    craftTimerRef.current = setInterval(() => {
+      setCraftSlide(s => (s + 1) % CR_COUNT);
+    }, 3200);
+  };
+
+  // Pause then restart after manual interaction
+  const pauseAndRestartTopPicks = () => {
+    clearInterval(topPicksTimerRef.current);
+    clearTimeout(topPicksRestartRef.current);
+    topPicksRestartRef.current = setTimeout(startTopPicks, 2000);
+  };
+  const pauseAndRestartCraft = () => {
+    clearInterval(craftTimerRef.current);
+    clearTimeout(craftRestartRef.current);
+    craftRestartRef.current = setTimeout(startCraft, 2000);
+  };
+
+  useEffect(() => { startTopPicks(); return () => { clearInterval(topPicksTimerRef.current); clearTimeout(topPicksRestartRef.current); }; }, []);
+  useEffect(() => { startCraft(); return () => { clearInterval(craftTimerRef.current); clearTimeout(craftRestartRef.current); }; }, []);
 
   const collProgress = useMotionValue(0);
 
@@ -315,26 +356,56 @@ export default function Home() {
                 <div className="top-picks-header">
                   <h3 className="top-picks-title">Top Picks</h3>
                   <div className="arrow-btns">
-                    <button className="arrow-btn" onClick={() => setCollectionSlide(s => Math.max(0, s - 1))}>→</button>
-                    <button className="arrow-btn" onClick={() => setCollectionSlide(s => Math.min(products.length - 2, s + 1))}>←</button>
+                    <button className="arrow-btn" onClick={() => {
+                      setCollectionSlide(s => (s - 1 + TP_COUNT) % TP_COUNT);
+                      pauseAndRestartTopPicks();
+                    }}>←</button>
+                    <button className="arrow-btn" onClick={() => {
+                      setCollectionSlide(s => (s + 1) % TP_COUNT);
+                      pauseAndRestartTopPicks();
+                    }}>→</button>
                   </div>
                 </div>
-                <div className="products-grid">
-                  {products.slice(collectionSlide, collectionSlide + 2).map((p, i) => (
-                    <div className="product-card" key={i}>
-                      <div className="product-card-img">
-                        <img src={p.img} alt={p.name} />
-                      </div>
-                      <div className="product-card-info">
-                        <div className="product-name-row">
-                          <span className="product-name">{p.name}</span>
-                          <span className="heart-icon">♡</span>
+                {/* Drag carousel — 2 cards visible, infinite loop */}
+                <div className="carousel-viewport">
+                  <motion.div
+                    ref={topPicksTrackRef}
+                    className="carousel-track"
+                    drag="x"
+                    dragConstraints={{ left: -(TP_COUNT * 200), right: 0 }}
+                    animate={{ x: `calc(${collectionSlide} * (-50% - 8px))` }}
+                    transition={{ type: 'spring', stiffness: 320, damping: 36 }}
+                    onDragEnd={(_, info) => {
+                      const threshold = 50;
+                      if (info.offset.x < -threshold) setCollectionSlide(s => (s + 1) % TP_COUNT);
+                      else if (info.offset.x > threshold) setCollectionSlide(s => (s - 1 + TP_COUNT) % TP_COUNT);
+                      pauseAndRestartTopPicks();
+                    }}
+                    style={{ cursor: 'grab' }}
+                  >
+                    {products.map((p, i) => (
+                      <div className="carousel-card product-card" key={i} style={{ flexShrink: 0, width: 'calc(50% - 8px)' }}>
+                        <div className="product-card-img">
+                          <img src={p.img} alt={p.name} />
                         </div>
-                        <div className="product-meta">{p.size} | {p.colors}</div>
-                        <div className="product-price">{p.price}</div>
+                        <div className="product-card-info">
+                          <div className="product-name-row">
+                            <span className="product-name">{p.name}</span>
+                            <span className="heart-icon">♡</span>
+                          </div>
+                          <div className="product-meta">{p.size} | {p.colors}</div>
+                          <div className="product-price">{p.price}</div>
+                        </div>
+                        <button className="btn-buy">BUY NOW</button>
                       </div>
-                      <button className="btn-buy">BUY NOW</button>
-                    </div>
+                    ))}
+                  </motion.div>
+                </div>
+                {/* Dot indicators */}
+                <div className="carousel-dots">
+                  {Array.from({ length: TP_COUNT }).map((_, i) => (
+                    <button key={i} className={`carousel-dot${collectionSlide === i ? ' active' : ''}`}
+                      onClick={() => { setCollectionSlide(i); pauseAndRestartTopPicks(); }} />
                   ))}
                 </div>
               </motion.div>
@@ -459,22 +530,46 @@ export default function Home() {
                 every piece undergoes rigorous quality checks to ensure flawless performance.
               </p>
             </div>
-            <div className={`craft-grid ${isVisible(7) ? 'animate-in animate-in-delay-3' : ''}`}>
-              {products.map((p, i) => (
-                <div className="product-card" key={i}>
-                  <div className="product-card-img">
-                    <img src={p.img} alt={p.name} />
-                  </div>
-                  <div className="product-card-info">
-                    <div className="product-name-row">
-                      <span className="product-name">{p.name}</span>
-                      <span className="heart-icon">♡</span>
+            {/* Drag carousel — 4 cards, infinite loop */}
+            <div className={`carousel-viewport craft-carousel-viewport ${isVisible(7) ? 'animate-in animate-in-delay-3' : ''}`}>
+              <motion.div
+                ref={craftTrackRef}
+                className="carousel-track craft-carousel-track"
+                drag="x"
+                dragConstraints={{ left: -(CR_COUNT * 300), right: 0 }}
+                animate={{ x: `calc(${craftSlide} * (-25% - 6px))` }}
+                transition={{ type: 'spring', stiffness: 300, damping: 34 }}
+                onDragEnd={(_, info) => {
+                  const threshold = 50;
+                  if (info.offset.x < -threshold) setCraftSlide(s => (s + 1) % CR_COUNT);
+                  else if (info.offset.x > threshold) setCraftSlide(s => (s - 1 + CR_COUNT) % CR_COUNT);
+                  pauseAndRestartCraft();
+                }}
+                style={{ cursor: 'grab' }}
+              >
+                {products.map((p, i) => (
+                  <div className="carousel-card product-card" key={i} style={{ flexShrink: 0, width: 'calc(25% - 6px)' }}>
+                    <div className="product-card-img">
+                      <img src={p.img} alt={p.name} />
                     </div>
-                    <div className="product-meta">{p.size} | {p.colors}</div>
-                    <div className="product-price">{p.price}</div>
+                    <div className="product-card-info">
+                      <div className="product-name-row">
+                        <span className="product-name">{p.name}</span>
+                        <span className="heart-icon">♡</span>
+                      </div>
+                      <div className="product-meta">{p.size} | {p.colors}</div>
+                      <div className="product-price">{p.price}</div>
+                    </div>
+                    <button className="btn-buy">BUY NOW</button>
                   </div>
-                  <button className="btn-buy">BUY NOW</button>
-                </div>
+                ))}
+              </motion.div>
+            </div>
+            {/* Dot indicators */}
+            <div className="carousel-dots craft-dots">
+              {products.map((_, i) => (
+                <button key={i} className={`carousel-dot${craftSlide === i ? ' active' : ''}`}
+                  onClick={() => { setCraftSlide(i); pauseAndRestartCraft(); }} />
               ))}
             </div>
           </section>
