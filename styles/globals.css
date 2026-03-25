@@ -874,13 +874,19 @@ body {
    SHARED: DRAG CAROUSEL
    =========================== */
 
+/* Craft carousel: each page is full-width showing all 4 cards in a grid */
 .craft-page {
   flex-shrink: 0;
-  width: 100%;          /* each page = exactly the viewport width */
+  width: 100%;          /* overridden with px via inline style after mount */
   height: 100%;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
+}
+
+/* No gap between pages — pixel translation must land exactly on page boundaries */
+.craft-track-nogap {
+  gap: 0 !important;
 }
 .carousel-viewport {
   flex: 1;

@@ -43,10 +43,22 @@ export default function Home() {
   const [isHero, setIsHero] = useState(true);
   const topPicksTrackRef = useRef(null);
   const craftTrackRef = useRef(null);
+  const craftViewportRef = useRef(null);   // NEW: to measure pixel width
+  const [craftPx, setCraftPx] = useState(0); // pixel width of one craft page
   const topPicksTimerRef = useRef(null);
   const craftTimerRef = useRef(null);
   const topPicksRestartRef = useRef(null);
   const craftRestartRef = useRef(null);
+
+  // Measure craft viewport width (pixel-precise, no % ambiguity)
+  useEffect(() => {
+    const measure = () => {
+      if (craftViewportRef.current) setCraftPx(craftViewportRef.current.clientWidth);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, []);
 
   const TP_COUNT = products.length - 1; // 3 stops (shows 2 cards at a time)
   const CR_PAGES  = 3;                   // 3 identical pages — same 4 cards each
@@ -531,19 +543,21 @@ export default function Home() {
                 every piece undergoes rigorous quality checks to ensure flawless performance.
               </p>
             </div>
-            {/* All 4 cards shown per page — slide the full row, never any blank space */}
-            <div className={`carousel-viewport craft-carousel-viewport ${isVisible(7) ? 'animate-in animate-in-delay-3' : ''}`}>
+            {/* All 4 cards shown per page — pixel-accurate slide, zero blank space */}
+            <div
+              ref={craftViewportRef}
+              className={`carousel-viewport craft-carousel-viewport ${isVisible(7) ? 'animate-in animate-in-delay-3' : ''}`}
+            >
               <motion.div
                 ref={craftTrackRef}
-                className="carousel-track"
+                className="carousel-track craft-track-nogap"
                 drag="x"
                 dragConstraints={{ left: -600, right: 600 }}
-                animate={{ x: `calc(${craftSlide} * -100%)` }}
+                animate={{ x: craftPx ? craftSlide * -craftPx : 0 }}
                 transition={crInstant
                   ? { duration: 0 }
                   : { type: 'spring', stiffness: 280, damping: 34 }}
                 onAnimationComplete={() => {
-                  // Pages 0, 1, 2 are all identical — instant reset is invisible
                   if (craftSlide >= CR_PAGES - 1) {
                     setCrInstant(true);
                     setCraftSlide(0);
@@ -561,9 +575,9 @@ export default function Home() {
                 }}
                 style={{ cursor: 'grab' }}
               >
-                {/* 3 identical pages: all 4 cards in a 4-column grid per page */}
                 {Array.from({ length: CR_PAGES }).map((_, pi) => (
-                  <div key={pi} className="craft-page">
+                  // Pixel width ensures perfect alignment — no blank gaps
+                  <div key={pi} className="craft-page" style={{ width: craftPx || '100%' }}>
                     {products.map((p, j) => (
                       <div className="product-card" key={j}>
                         <div className="product-card-img">
