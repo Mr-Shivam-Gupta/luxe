@@ -45,15 +45,15 @@ export default function Home() {
 
   // Phase 1 (0 → 0.45): image is FULL PAGE — fades in + zooms in from scale 1.12 → 1
   // Phase 2 (0.45 → 1): image shrinks and settles into the left column
-  const imgOpacity = useTransform(collProgress, [0, 0.3],          [0, 1]);
-  const imgScale   = useTransform(collProgress, [0, 0.45],         [1.12, 1]);
-  const imgWidth   = useTransform(collProgress, [0.45, 1],         ["100%", "48%"]);
-  const imgHeight  = useTransform(collProgress, [0.45, 1],         ["100%", "88%"]);
-  const imgTop     = useTransform(collProgress, [0.45, 1],         ["0%",   "6%"]);
-  const imgRadius  = useTransform(collProgress, [0.45, 1],         ["0px",  "12px"]);
-  const textOpacity  = useTransform(collProgress, [0.75, 1], [0, 1]);
+  const imgOpacity = useTransform(collProgress, [0, 0.3], [0, 1]);
+  const imgScale = useTransform(collProgress, [0, 0.45], [1.12, 1]);
+  const imgWidth = useTransform(collProgress, [0.45, 1], ["100%", "48%"]);
+  const imgHeight = useTransform(collProgress, [0.45, 1], ["100%", "88%"]);
+  const imgTop = useTransform(collProgress, [0.45, 1], ["0%", "11%"]);
+  const imgRadius = useTransform(collProgress, [0.45, 1], ["0px", "12px"]);
+  const textOpacity = useTransform(collProgress, [0.75, 1], [0, 1]);
   const rightOpacity = useTransform(collProgress, [0.75, 1], [0, 1]);
-  const rightX       = useTransform(collProgress, [0.75, 1], [40, 0]);
+  const rightX = useTransform(collProgress, [0.75, 1], [40, 0]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -114,7 +114,7 @@ export default function Home() {
         else if (scrollY >= end) progress = 1;
         else progress = (scrollY - start) / (end - start);
         collProgress.set(progress);
-        
+
         // Hide header marquee if not actively traversing at top
         if (scrollY > 20) setIsHero(false);
         else setIsHero(true);
@@ -175,12 +175,12 @@ export default function Home() {
       <div className="app-layout">
         <header className="global-header">
           {/* Announcement bar */}
-          <motion.div 
+          <motion.div
             style={{ overflow: 'hidden' }}
             initial={false}
-            animate={{ 
-              height: isHero ? 'auto' : 0, 
-              opacity: isHero ? 1 : 0 
+            animate={{
+              height: isHero ? 'auto' : 0,
+              opacity: isHero ? 1 : 0
             }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
           >
