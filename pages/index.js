@@ -49,7 +49,8 @@ export default function Home() {
   const craftRestartRef = useRef(null);
 
   const TP_COUNT = products.length - 1; // 3 stops (shows 2 cards at a time)
-  const CR_COUNT = products.length;     // 4 stops
+  const CR_PAGES  = 3;                   // 3 identical pages — same 4 cards each
+  const [crInstant, setCrInstant] = useState(false);
 
   // Start / restart Top Picks auto-loop
   const startTopPicks = () => {
@@ -59,11 +60,11 @@ export default function Home() {
     }, 3000);
   };
 
-  // Start / restart Craft auto-loop
+  // Start / restart Craft auto-loop (just increment; onAnimationComplete handles the reset)
   const startCraft = () => {
     clearInterval(craftTimerRef.current);
     craftTimerRef.current = setInterval(() => {
-      setCraftSlide(s => (s + 1) % CR_COUNT);
+      setCraftSlide(s => s + 1);
     }, 3200);
   };
 
@@ -530,47 +531,58 @@ export default function Home() {
                 every piece undergoes rigorous quality checks to ensure flawless performance.
               </p>
             </div>
-            {/* Drag carousel — 4 cards, infinite loop */}
+            {/* All 4 cards shown per page — slide the full row, never any blank space */}
             <div className={`carousel-viewport craft-carousel-viewport ${isVisible(7) ? 'animate-in animate-in-delay-3' : ''}`}>
               <motion.div
                 ref={craftTrackRef}
-                className="carousel-track craft-carousel-track"
+                className="carousel-track"
                 drag="x"
-                dragConstraints={{ left: -(CR_COUNT * 300), right: 0 }}
-                animate={{ x: `calc(${craftSlide} * (-25% - 6px))` }}
-                transition={{ type: 'spring', stiffness: 300, damping: 34 }}
+                dragConstraints={{ left: -600, right: 600 }}
+                animate={{ x: `calc(${craftSlide} * -100%)` }}
+                transition={crInstant
+                  ? { duration: 0 }
+                  : { type: 'spring', stiffness: 280, damping: 34 }}
+                onAnimationComplete={() => {
+                  // Pages 0, 1, 2 are all identical — instant reset is invisible
+                  if (craftSlide >= CR_PAGES - 1) {
+                    setCrInstant(true);
+                    setCraftSlide(0);
+                  } else if (craftSlide < 0) {
+                    setCrInstant(true);
+                    setCraftSlide(CR_PAGES - 2);
+                  } else {
+                    setCrInstant(false);
+                  }
+                }}
                 onDragEnd={(_, info) => {
-                  const threshold = 50;
-                  if (info.offset.x < -threshold) setCraftSlide(s => (s + 1) % CR_COUNT);
-                  else if (info.offset.x > threshold) setCraftSlide(s => (s - 1 + CR_COUNT) % CR_COUNT);
+                  if (info.offset.x < -50) setCraftSlide(s => s + 1);
+                  else if (info.offset.x > 50) setCraftSlide(s => Math.max(0, s - 1));
                   pauseAndRestartCraft();
                 }}
                 style={{ cursor: 'grab' }}
               >
-                {products.map((p, i) => (
-                  <div className="carousel-card product-card" key={i} style={{ flexShrink: 0, width: 'calc(25% - 6px)' }}>
-                    <div className="product-card-img">
-                      <img src={p.img} alt={p.name} />
-                    </div>
-                    <div className="product-card-info">
-                      <div className="product-name-row">
-                        <span className="product-name">{p.name}</span>
-                        <span className="heart-icon">♡</span>
+                {/* 3 identical pages: all 4 cards in a 4-column grid per page */}
+                {Array.from({ length: CR_PAGES }).map((_, pi) => (
+                  <div key={pi} className="craft-page">
+                    {products.map((p, j) => (
+                      <div className="product-card" key={j}>
+                        <div className="product-card-img">
+                          <img src={p.img} alt={p.name} />
+                        </div>
+                        <div className="product-card-info">
+                          <div className="product-name-row">
+                            <span className="product-name">{p.name}</span>
+                            <span className="heart-icon">♡</span>
+                          </div>
+                          <div className="product-meta">{p.size} | {p.colors}</div>
+                          <div className="product-price">{p.price}</div>
+                        </div>
+                        <button className="btn-buy">BUY NOW</button>
                       </div>
-                      <div className="product-meta">{p.size} | {p.colors}</div>
-                      <div className="product-price">{p.price}</div>
-                    </div>
-                    <button className="btn-buy">BUY NOW</button>
+                    ))}
                   </div>
                 ))}
               </motion.div>
-            </div>
-            {/* Dot indicators */}
-            <div className="carousel-dots craft-dots">
-              {products.map((_, i) => (
-                <button key={i} className={`carousel-dot${craftSlide === i ? ' active' : ''}`}
-                  onClick={() => { setCraftSlide(i); pauseAndRestartCraft(); }} />
-              ))}
             </div>
           </section>
 
