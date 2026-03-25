@@ -31,18 +31,17 @@ const products = [
   { name: 'Indiglo', size: '44mm', colors: '3 Colors', price: '₹9,899', img: WATCHES.watch4 },
 ];
 
+import { useMotionValue } from 'framer-motion';
+
 export default function Home() {
   const containerRef = useRef(null);
   const lenisRef = useRef(null);
   const collectionRef = useRef(null);
   const [visibleSections, setVisibleSections] = useState(new Set([0]));
   const [collectionSlide, setCollectionSlide] = useState(0);
+  const [isHero, setIsHero] = useState(true);
 
-  const { scrollYProgress: collProgress } = useScroll({
-    target: collectionRef,
-    container: containerRef,
-    offset: ["start start", "end end"]
-  });
+  const collProgress = useMotionValue(0);
 
   const imgWidth = useTransform(collProgress, [0, 0.5, 1], ["100%", "48%", "48%"]);
   const imgHeight = useTransform(collProgress, [0, 0.5, 1], ["100%", "48%", "88%"]);
@@ -78,25 +77,45 @@ export default function Home() {
         // Find closest section break
         // With sticky stacking, we want to snap to where the NEXT section starts revealing
         // OR where the current section is fully pinned.
-        
+
         // Simpler approach: Snap to multiples of viewport height
         // Because sticky sections naturally stack at 0, 100vh, 200vh scroll positions.
-        
+
         const scrollY = container.scrollTop;
         const vh = container.clientHeight;
         const snapPoint = Math.round(scrollY / vh) * vh;
 
         if (Math.abs(scrollY - snapPoint) > 5) {
-           lenis.scrollTo(snapPoint, { 
-             duration: 1.2,
-             easing: (t) => 1 - Math.pow(1 - t, 4), // easeOutQuart
-             lock: true 
-           });
+          lenis.scrollTo(snapPoint, {
+            duration: 1.2,
+            easing: (t) => 1 - Math.pow(1 - t, 4), // easeOutQuart
+            lock: true
+          });
         }
       }, 150); // Wait for scroll to settle
     };
 
-    lenis.on('scroll', handleSnap);
+    lenis.on('scroll', () => {
+      // Custom smooth snap logic
+      handleSnap();
+
+      // Frame-accurate manual progress driver for Framer Motion 'New Collection'
+      const scrollY = container.scrollTop;
+      const vh = container.clientHeight;
+      if (vh) {
+        const start = 3 * vh;
+        const end = 5 * vh;
+        let progress = 0;
+        if (scrollY <= start) progress = 0;
+        else if (scrollY >= end) progress = 1;
+        else progress = (scrollY - start) / (end - start);
+        collProgress.set(progress);
+        
+        // Hide header marquee if not actively traversing at top
+        if (scrollY > 20) setIsHero(false);
+        else setIsHero(true);
+      }
+    });
 
     function raf(time) {
       lenis.raf(time);
@@ -109,8 +128,9 @@ export default function Home() {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
+          if (!entry.target.dataset.index) return;
           const idx = parseInt(entry.target.dataset.index);
-          if (entry.isIntersecting) {
+          if (entry.isIntersecting && !isNaN(idx)) {
             setVisibleSections(prev => new Set([...prev, idx]));
           }
         });
@@ -129,8 +149,7 @@ export default function Home() {
 
   const scrollToSection = (idx) => {
     const container = containerRef.current;
-    const sections = container.querySelectorAll('.snap-section');
-    const target = sections[idx];
+    const target = container.querySelector(`[data-index="${idx}"]`);
     if (target && lenisRef.current) {
       lenisRef.current.scrollTo(target, { duration: 2.0 });
     } else if (target) {
@@ -152,16 +171,26 @@ export default function Home() {
       <div className="app-layout">
         <header className="global-header">
           {/* Announcement bar */}
-          <div className="announcement-bar">
-            <div className="announcement-bar-track" aria-label="Promotional offer marquee">
-              <div className="announcement-bar-content">
-                Get 20% off using our coupon: <span>NEWUSER30</span>
-              </div>
-              <div className="announcement-bar-content" aria-hidden="true">
-                Get 20% off using our coupon: <span>NEWUSER30</span>
+          <motion.div 
+            style={{ overflow: 'hidden' }}
+            initial={false}
+            animate={{ 
+              height: isHero ? 'auto' : 0, 
+              opacity: isHero ? 1 : 0 
+            }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            <div className="announcement-bar">
+              <div className="announcement-bar-track" aria-label="Promotional offer marquee">
+                <div className="announcement-bar-content">
+                  Get 20% off using our coupon: <span>NEWUSER30</span>
+                </div>
+                <div className="announcement-bar-content" aria-hidden="true">
+                  Get 20% off using our coupon: <span>NEWUSER30</span>
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
           {/* Navbar */}
           <nav className="navbar">
             <div className="nav-left">
@@ -184,76 +213,74 @@ export default function Home() {
           {/* ===== SECTION 0: HERO (watch close-up with "Crafted for Time") ===== */}
           <section className="snap-section hero-section" data-index="0">
             {/* Hero image */}
-          <div className="hero-image-container">
-            <video
-              className="hero-video"
-              src={WATCHES.heroVideo}
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
-            <div className="hero-image-overlay">
-              <p className={`hero-tagline ${isVisible(0) ? 'animate-in animate-in-delay-2' : ''}`}>
-                Crafted for Time.
-              </p>
+            <div className="hero-image-container">
+              <video
+                className="hero-video"
+                src={WATCHES.heroVideo}
+                autoPlay
+                muted
+                loop
+                playsInline
+              />
+              <div className="hero-image-overlay">
+                <p className={`hero-tagline ${isVisible(0) ? 'animate-in animate-in-delay-2' : ''}`}>
+                  Crafted for Time.
+                </p>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* ===== SECTION 1: FEATURE VIDEO ===== */}
-        <section className="snap-section feature-video-section" data-index="1">
-          <div className="hero-image-container feature-video-container">
-            <video
-              className={`hero-video feature-video ${isVisible(1) ? 'animate-in animate-in-delay-1' : ''}`}
-              src={WATCHES.featureVideo}
-              autoPlay
-              muted
-              loop
-              playsInline
-            />
-          </div>
-        </section>
+          {/* ===== SECTION 1: FEATURE VIDEO ===== */}
+          <section className="snap-section feature-video-section" data-index="1">
+            <div className="hero-image-container feature-video-container">
+              <video
+                className={`hero-video feature-video ${isVisible(1) ? 'animate-in animate-in-delay-1' : ''}`}
+                src={WATCHES.featureVideo}
+                autoPlay
+                muted
+                loop
+                playsInline
+              />
+            </div>
+          </section>
 
-        {/* ===== SECTION 2: LANDING (Timeless Craft. Modern Legacy.) ===== */}
-        <section className="snap-section landing-section" data-index="2">
-          <div className={`landing-left ${isVisible(2) ? 'animate-in animate-in-delay-1' : ''}`}>
-            <h1 className="landing-heading">
-              Timeless Craft.<br />
-              <em>Modern Legacy.</em>
-            </h1>
-            <p className="landing-body">
-              Discover watches that don't just tell time — they define it. Precision-engineered,
-              masterfully crafted, and designed for those who value excellence.
-            </p>
-            <a className="btn-shop" onClick={() => scrollToSection(3)}>SHOP NOW</a>
-          </div>
-          <div className={`landing-right ${isVisible(2) ? 'animate-in animate-in-delay-3' : ''}`}>
-            <img src={WATCHES.hero2} alt="Gold luxury watch" />
-          </div>
-        </section>
+          {/* ===== SECTION 2: LANDING (Timeless Craft. Modern Legacy.) ===== */}
+          <section className="snap-section landing-section" data-index="2">
+            <div className={`landing-left ${isVisible(2) ? 'animate-in animate-in-delay-1' : ''}`}>
+              <h1 className="landing-heading">
+                Timeless Craft.<br />
+                <em>Modern Legacy.</em>
+              </h1>
+              <p className="landing-body">
+                Discover watches that don't just tell time — they define it. Precision-engineered,
+                masterfully crafted, and designed for those who value excellence.
+              </p>
+              <a className="btn-shop" onClick={() => scrollToSection(3)}>SHOP NOW</a>
+            </div>
+            <div className={`landing-right ${isVisible(2) ? 'animate-in animate-in-delay-3' : ''}`}>
+              <img src={WATCHES.hero2} alt="Gold luxury watch" />
+            </div>
+          </section>
 
-        {/* ===== SECTION 3: NEW COLLECTION ===== */}
-        <section 
-          className="snap-section collection-section" 
-          data-index="3" 
-          ref={collectionRef}
-          style={{ height: '300%', position: 'relative', overflow: 'visible' }}
-        >
-          {/* Inner sticky wrapper */}
-          <div style={{ position: 'sticky', top: 0, height: '33.3333%', display: 'flex', flexDirection: 'column' }}>
+
+
+          {/* ===== SECTION 3: NEW COLLECTION ===== */}
+          <section
+            className="snap-section collection-section"
+            data-index="3"
+          >
             <div className="collection-inner" style={{ position: 'relative' }}>
               {/* The animating image */}
-              <motion.img 
-                src={WATCHES.collection} 
+              <motion.img
+                src={WATCHES.collection}
                 alt="Man wearing luxury watch"
-                style={{ 
+                style={{
                   position: 'absolute',
                   top: imgTop,
                   left: imgLeft,
                   width: imgWidth,
                   height: imgHeight,
-                  objectFit: 'cover', 
+                  objectFit: 'cover',
                   borderRadius: '12px',
                   zIndex: 5
                 }}
@@ -261,7 +288,7 @@ export default function Home() {
               <div className="collection-left" style={{ position: 'relative', minHeight: 0, zIndex: 10 }}>
                 <motion.h2 className="section-label" style={{ opacity: textOpacity }}>New collection</motion.h2>
               </div>
-              <motion.div 
+              <motion.div
                 className="collection-right"
                 style={{
                   opacity: rightOpacity,
@@ -297,185 +324,208 @@ export default function Home() {
                 </div>
               </motion.div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* ===== SECTION 4: WHY CHOOSE US ===== */}
-        <section className="snap-section why-section" data-index="4">
-          <img className="why-bg" src={WATCHES.heroImage} alt="Why choose us background" />
-          <div className="why-content">
-            <p className={`why-label ${isVisible(4) ? 'animate-in animate-in-delay-1' : ''}`}>
-              WHY CHOOSE US
-            </p>
-            <h2 className={`why-title ${isVisible(4) ? 'animate-in animate-in-delay-2' : ''}`}>
-              Crafted for Time.
-            </h2>
-            <p className={`why-body ${isVisible(4) ? 'animate-in animate-in-delay-3' : ''}`}>
-              Experience the harmony of design and precision. Every curve, every component,
-              and every detail is crafted to deliver unmatched elegance and performance.
-            </p>
-          </div>
-        </section>
+          {/* Fake transparent spacers to generate the scroll-stops for the animation */}
+          <section className="snap-section" style={{ opacity: 0, pointerEvents: 'none', zIndex: 31 }} />
+          <section className="snap-section" style={{ opacity: 0, pointerEvents: 'none', zIndex: 32 }} />
 
-        {/* ===== SECTION 5: SIGNATURE COLLECTION ===== */}
-        <section className="snap-section signature-section" data-index="5">
-          <div className="signature-header">
-            <h2 className={`signature-title ${isVisible(5) ? 'animate-in animate-in-delay-1' : ''}`}>
-              The <span className="muted">Signature</span><br />Collection
-            </h2>
-            <p className={`signature-desc ${isVisible(5) ? 'animate-in animate-in-delay-2' : ''}`}>
-              We believe a watch is more than an accessory — it is a legacy worn on the wrist.
-              Every timepiece we offer is crafted with meticulous attention to detail, combining
-              heritage craftsmanship with modern innovation.
-            </p>
-          </div>
-          <div className={`signature-grid ${isVisible(5) ? 'animate-in animate-in-delay-3' : ''}`}>
-            {[
-              { name: 'The Royal Series', desc: 'Crafted for those who carry legacy with effortless authority.', img: WATCHES.watch5 },
-              { name: 'Midnight Edition', desc: 'Bold in darkness, refined in every detail.', img: WATCHES.watch3 },
-              { name: 'Classic Heritage', desc: 'Where timeless design meets enduring craftsmanship.', img: WATCHES.watch4 },
-            ].map((item, i) => (
-              <div className="sig-card" key={i}>
-                <div className="sig-card-img">
-                  <img src={item.img} alt={item.name} />
-                </div>
-                <h3 className="sig-card-name">{item.name}</h3>
-                <p className="sig-card-desc">{item.desc}</p>
-                <button className="btn-buy-outline">BUY NOW</button>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ===== SECTION 6: BRAND STORY ===== */}
-        <section className="snap-section brand-section" data-index="6">
-          <div className="brand-header">
-            <h2 className={`brand-title ${isVisible(6) ? 'animate-in animate-in-delay-1' : ''}`}>
-              BRAND <span className="muted">STORY</span>
-            </h2>
-            <p className={`brand-desc ${isVisible(6) ? 'animate-in animate-in-delay-2' : ''}`}>
-              Born from a passion for perfection, our brand stands at the intersection of
-              tradition and innovation. Each watch is a reflection of timeless artistry,
-              designed for individuals who appreciate sophistication, precision, and enduring style.
-              We don't just create watches — we craft moments that last forever.
-            </p>
-          </div>
-
-          {/* Main brand image with ELEGANT overlay */}
-          <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', minHeight: 0 }}>
-            <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
-              <img src={WATCHES.brand} alt="Brand story" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: '80px',
-                  fontWeight: 700,
-                  color: 'rgba(255,255,255,0.25)',
-                  letterSpacing: '0.05em',
-                  userSelect: 'none'
-                }}>ELEGANT</span>
-              </div>
+          {/* ===== SECTION 4: WHY CHOOSE US ===== */}
+          <section className="snap-section why-section" data-index="4">
+            <img className="why-bg" src={WATCHES.heroImage} alt="Why choose us background" />
+            <div className="why-content">
+              <p className={`why-label ${isVisible(4) ? 'animate-in animate-in-delay-1' : ''}`}>
+                WHY CHOOSE US
+              </p>
+              <h2 className={`why-title ${isVisible(4) ? 'animate-in animate-in-delay-2' : ''}`}>
+                Crafted for Time.
+              </h2>
+              <p className={`why-body ${isVisible(4) ? 'animate-in animate-in-delay-3' : ''}`}>
+                Experience the harmony of design and precision. Every curve, every component,
+                and every detail is crafted to deliver unmatched elegance and performance.
+              </p>
             </div>
+          </section>
 
-            {/* Right: stacked word art */}
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', paddingLeft: '16px' }}>
-              {['TIMELESS', 'REFINED', 'PRESTIGE', 'HERITAGE'].map((word, i) => (
-                <div
-                  key={word}
-                  className={isVisible(6) ? 'animate-in' : ''}
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '60px',
-                    fontWeight: 700,
-                    color: 'var(--text-dark)',
-                    lineHeight: 1,
-                    letterSpacing: '-0.01em',
-                    animationDelay: `${0.1 * (i + 1)}s`,
-                    opacity: isVisible(6) ? undefined : 0,
-                  }}
-                >
-                  {word}
+          {/* ===== SECTION 5: SIGNATURE COLLECTION ===== */}
+          <section className="snap-section signature-section" data-index="5">
+            <div className="signature-header">
+              <h2 className={`signature-title ${isVisible(5) ? 'animate-in animate-in-delay-1' : ''}`}>
+                The <span className="muted">Signature</span><br />Collection
+              </h2>
+              <p className={`signature-desc ${isVisible(5) ? 'animate-in animate-in-delay-2' : ''}`}>
+                We believe a watch is more than an accessory — it is a legacy worn on the wrist.
+                Every timepiece we offer is crafted with meticulous attention to detail, combining
+                heritage craftsmanship with modern innovation.
+              </p>
+            </div>
+            <div className={`signature-grid ${isVisible(5) ? 'animate-in animate-in-delay-3' : ''}`}>
+              {[
+                { name: 'The Royal Series', desc: 'Crafted for those who carry legacy with effortless authority.', img: WATCHES.watch5, tag: 'Limited' },
+                { name: 'Midnight Edition', desc: 'Bold in darkness, refined in every detail.', img: WATCHES.watch3, tag: 'Signature' },
+                { name: 'Classic Heritage', desc: 'Where timeless design meets enduring craftsmanship.', img: WATCHES.watch4, tag: 'Heritage' },
+              ].map((item, i) => (
+                <div className="sig-card" key={i}>
+                  <div className="sig-card-img">
+                    <img src={item.img} alt={item.name} />
+                    <span className="sig-tag">{item.tag}</span>
+                  </div>
+                  <h3 className="sig-card-name">{item.name}</h3>
+                  <p className="sig-card-desc">{item.desc}</p>
+                  <button className="btn-buy-outline">EXPLORE COLLECTION</button>
                 </div>
               ))}
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* ===== SECTION 7: CRAFTSMANSHIP ===== */}
-        <section className="snap-section craft-section" data-index="7">
-          <div className="craft-header">
-            <h2 className={`craft-title ${isVisible(7) ? 'animate-in animate-in-delay-1' : ''}`}>
-              CRAFTSMANSHIP <span className="muted">SECTION</span>
-            </h2>
-            <p className={`craft-desc ${isVisible(7) ? 'animate-in animate-in-delay-2' : ''}`}>
-              Our watches are assembled with precision using world-class materials and
-              cutting-edge techniques. From intricate movements to hand-finished detailing,
-              every piece undergoes rigorous quality checks to ensure flawless performance.
-            </p>
-          </div>
-          <div className={`craft-grid ${isVisible(7) ? 'animate-in animate-in-delay-3' : ''}`}>
-            {products.map((p, i) => (
-              <div className="product-card" key={i}>
-                <div className="product-card-img">
-                  <img src={p.img} alt={p.name} />
+          {/* ===== SECTION 6: BRAND STORY ===== */}
+          <section className="snap-section brand-section" data-index="6">
+            <div className="brand-header">
+              <h2 className={`brand-title ${isVisible(6) ? 'animate-in animate-in-delay-1' : ''}`}>
+                BRAND <span className="muted">STORY</span>
+              </h2>
+              <p className={`brand-desc ${isVisible(6) ? 'animate-in animate-in-delay-2' : ''}`}>
+                Born from a passion for perfection, our brand stands at the intersection of
+                tradition and innovation. Each watch is a reflection of timeless artistry,
+                designed for individuals who appreciate sophistication, precision, and enduring style.
+                We don't just create watches — we craft moments that last forever.
+              </p>
+            </div>
+
+            {/* Main brand image with ELEGANT overlay */}
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', minHeight: 0 }}>
+              <div style={{ position: 'relative', overflow: 'hidden', borderRadius: '8px' }}>
+                <img src={WATCHES.brand} alt="Brand story" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: '80px',
+                    fontWeight: 700,
+                    color: 'rgba(255,255,255,0.25)',
+                    letterSpacing: '0.05em',
+                    userSelect: 'none'
+                  }}>ELEGANT</span>
                 </div>
-                <div className="product-card-info">
-                  <div className="product-name-row">
-                    <span className="product-name">{p.name}</span>
-                    <span className="heart-icon">♡</span>
-                  </div>
-                  <div className="product-meta">{p.size} | {p.colors}</div>
-                  <div className="product-price">{p.price}</div>
-                </div>
-                <button className="btn-buy">BUY NOW</button>
               </div>
-            ))}
-          </div>
-        </section>
 
-        {/* ===== SECTION 8: FOOTER ===== */}
-        <section className="snap-section footer-section" data-index="8">
-          <div className="footer-top">
-            <div className="footer-brand">
-              <div className="footer-logo">LUXE</div>
-              <p className="footer-tagline">Crafted for Those Who Value Time.</p>
-              <img className="footer-img" src={WATCHES.footer} alt="Watch mechanism" />
-            </div>
-
-            <div className="footer-col">
-              <h4>Quick Links</h4>
-              <ul>
-                {['Home', 'Watches', 'Collections', 'New Arrivals', 'Limited Editions', 'About Us', 'Contact'].map(link => (
-                  <li key={link}><a href="#">{link}</a></li>
+              {/* Right: stacked word art */}
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px', paddingLeft: '16px' }}>
+                {['TIMELESS', 'REFINED', 'PRESTIGE', 'HERITAGE'].map((word, i) => (
+                  <div
+                    key={word}
+                    className={isVisible(6) ? 'animate-in' : ''}
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '60px',
+                      fontWeight: 700,
+                      color: 'var(--text-dark)',
+                      lineHeight: 1,
+                      letterSpacing: '-0.01em',
+                      animationDelay: `${0.1 * (i + 1)}s`,
+                      opacity: isVisible(6) ? undefined : 0,
+                    }}
+                  >
+                    {word}
+                  </div>
                 ))}
-              </ul>
+              </div>
+            </div>
+          </section>
+
+          {/* ===== SECTION 7: CRAFTSMANSHIP ===== */}
+          <section className="snap-section craft-section" data-index="7">
+            <div className="craft-header">
+              <h2 className={`craft-title ${isVisible(7) ? 'animate-in animate-in-delay-1' : ''}`}>
+                CRAFTSMANSHIP <span className="muted">SECTION</span>
+              </h2>
+              <p className={`craft-desc ${isVisible(7) ? 'animate-in animate-in-delay-2' : ''}`}>
+                Our watches are assembled with precision using world-class materials and
+                cutting-edge techniques. From intricate movements to hand-finished detailing,
+                every piece undergoes rigorous quality checks to ensure flawless performance.
+              </p>
+            </div>
+            <div className={`craft-grid ${isVisible(7) ? 'animate-in animate-in-delay-3' : ''}`}>
+              {products.map((p, i) => (
+                <div className="product-card" key={i}>
+                  <div className="product-card-img">
+                    <img src={p.img} alt={p.name} />
+                  </div>
+                  <div className="product-card-info">
+                    <div className="product-name-row">
+                      <span className="product-name">{p.name}</span>
+                      <span className="heart-icon">♡</span>
+                    </div>
+                    <div className="product-meta">{p.size} | {p.colors}</div>
+                    <div className="product-price">{p.price}</div>
+                  </div>
+                  <button className="btn-buy">BUY NOW</button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* ===== SECTION 8: FOOTER ===== */}
+          <section className="snap-section footer-section" data-index="8">
+            <div className="footer-top">
+              <div className="footer-brand">
+                <h3 className="footer-logo">LUXE</h3>
+                <img className="footer-logo-img" src="/assets/footer_logo.png" alt="LUXE Logo" />
+                <p className="footer-tagline">Crafted for Those Who Value Time.</p>
+                {/* <img className="footer-img" src={WATCHES.footer} alt="Watch mechanism" /> */}
+              </div>
+
+              <div className="footer-col">
+                <h4>Quick Links</h4>
+                <ul>
+                  {['Home', 'Watches', 'Collections', 'New Arrivals', 'Limited Editions', 'About Us', 'Contact'].map(link => (
+                    <li key={link}><a href="#">{link}</a></li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="footer-col">
+                <h4>Customer Care</h4>
+                <ul>
+                  {['Help Center', 'Shipping & Delivery', 'Returns & Exchanges', 'Warranty', 'Track Your Order'].map(link => (
+                    <li key={link}><a href="#">{link}</a></li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="footer-col">
+                <h4>Discover</h4>
+                <ul>
+                  {['Craftsmanship', 'Our Story', 'Journal', 'Store Locator'].map(link => (
+                    <li key={link}><a href="#">{link}</a></li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
-            <div className="footer-col">
-              <h4>Customer Care</h4>
-              <ul>
-                {['Help Center', 'Shipping & Delivery', 'Returns & Exchanges', 'Warranty', 'Track Your Order'].map(link => (
-                  <li key={link}><a href="#">{link}</a></li>
-                ))}
-              </ul>
+            <div className="footer-bottom">
+              <div className="copyright">
+                <span>&copy; {new Date().getFullYear()} LUXE Watches. All rights reserved.</span>
+                <div className="footer-bottom-links">
+                  <a href="#">Privacy Policy</a>
+                  <a href="#">Terms of Service</a>
+                </div>
+              </div>
+              <div className="social-icons">
+                <a className="social-icon" href="#">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M7.8 2h8.4C19.4 2 22 4.6 22 7.8v8.4a5.8 5.8 0 0 1-5.8 5.8H7.8C4.6 22 2 19.4 2 16.2V7.8A5.8 5.8 0 0 1 7.8 2zm-.2 2A3.6 3.6 0 0 0 4 7.6v8.8C4 18.4 5.6 20 7.6 20h8.8a3.6 3.6 0 0 0 3.6-3.6V7.6C20 5.6 18.4 4 16.4 4H7.6zm9.65 1.5a1.25 1.25 0 0 1 1.25 1.25A1.25 1.25 0 0 1 17.25 8 1.25 1.25 0 0 1 16 6.75a1.25 1.25 0 0 1 1.25-1.25zM12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3z" /></svg>
+                </a>
+                <a className="social-icon" href="#">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.99 3.66 9.13 8.44 9.88v-6.99h-2.54V12h2.54V9.8c0-2.5 1.49-3.89 3.78-3.89 1.1 0 2.25.2 2.25.2v2.47h-1.27c-1.25 0-1.64.78-1.64 1.57V12h2.82l-.45 2.89h-2.37v6.99C18.34 21.13 22 16.99 22 12c0-5.52-4.48-10-10-10z" /></svg>
+                </a>
+                <a className="social-icon" href="#">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 2.016H12c-5.518 0-10.005 4.5-10.01 10.024-.002 1.77.465 3.5 1.35 5.022L2 22.05l5.127-1.345a9.965 9.965 0 0 0 4.896 1.272h.005c5.519 0 10.006-4.5 10.01-10.024A9.957 9.957 0 0 0 12.031 2.016zM17.15 14.65c-.282.78-1.579 1.48-2.181 1.516-.549.034-1.229-.168-3.32-1.041-2.58-1.077-4.22-3.708-4.347-3.874-.128-.168-1.037-1.378-1.037-2.628 0-1.25.642-1.87 1.002-2.164.298-.242.748-.344 1.135-.344.159 0 .313.01.455.016.353.015.534.037.766.58.293.687.95 2.308 1.035 2.482.086.173.18.423.042.695-.138.272-.25.378-.44.577-.197.208-.415.441-.58.625-.183.203-.385.429-.168.793.216.363.953 1.554 2.035 2.62 1.393 1.373 2.502 1.745 2.879 1.895.378.15.65.125.865-.084.286-.275 1.075-1.29 1.365-1.733.29-.444.606-.356.963-.207.357.149 2.259 1.055 2.646 1.255.385.198.643.297.737.465.093.167.093.978-.189 1.758z" /></svg>
+                </a>
+                <a className="social-icon" href="#">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 24.95H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zl-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                </a>
+              </div>
             </div>
-
-            <div className="footer-col">
-              <h4>Discover</h4>
-              <ul>
-                {['Craftsmanship', 'Our Story', 'Journal', 'Store Locator'].map(link => (
-                  <li key={link}><a href="#">{link}</a></li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          <div className="footer-bottom">
-            {['📷', 'f', '💬', '✕'].map((icon, i) => (
-              <a key={i} className="social-icon" href="#">{icon}</a>
-            ))}
-          </div>
-        </section>
+          </section>
 
         </div>
       </div>
